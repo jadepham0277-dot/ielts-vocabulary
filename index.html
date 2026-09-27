@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>IELTS Vocabulary</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#2563eb;--good:#16a34a;--warn:#d97706;--danger:#dc2626}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:10;background:#111827;color:white;padding:18px max(18px,env(safe-area-inset-left)) 14px}
+header h1{margin:0;font-size:22px}header small{opacity:.7}
+main{max-width:980px;margin:auto;padding:16px 16px 100px}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;gap:4px;padding:8px max(8px,env(safe-area-inset-left)) max(8px,env(safe-area-inset-bottom))}
+nav button{border:0;background:none;padding:8px 12px;border-radius:12px;color:var(--muted);font-size:12px}nav button.active{background:#eef2ff;color:var(--accent);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}.stat b{display:block;font-size:27px}.stat span{color:var(--muted);font-size:13px}
+button,.btn{cursor:pointer;border:0;border-radius:12px;padding:11px 14px;font-weight:600;background:#eef2ff;color:#1e40af}.primary{background:var(--accent);color:#fff}.danger{background:#fee2e2;color:#991b1b}.good{background:#dcfce7;color:#166534}.warn{background:#fef3c7;color:#92400e}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;font:inherit}label{display:block;font-size:13px;font-weight:700;margin:10px 0 6px}.row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.word{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding:13px 0}.word:last-child{border:0}.badge{display:inline-block;padding:3px 8px;border-radius:99px;background:#f3f4f6;font-size:12px;margin:2px}.cefr-B1{background:#dcfce7}.cefr-B2{background:#dbeafe}.cefr-C1{background:#fef3c7}.cefr-C2{background:#f3e8ff}
+.muted{color:var(--muted)}.hidden{display:none}.review-box{text-align:center;padding:24px}.review-word{font-size:34px;font-weight:800;margin:15px 0}.meaning{font-size:20px;margin:15px 0}.example{background:#f8fafc;padding:12px;border-radius:12px;text-align:left}
+.progress{height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden}.progress i{display:block;height:100%;background:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:9px;border-bottom:1px solid var(--line)}
+@media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}.row{grid-template-columns:1fr}.word{align-items:flex-start}.word .actions{margin-top:0}}
+</style>
+</head>
+<body>
+<header><h1>IELTS Vocabulary</h1><small>Vocabulary • Review • Cambridge Error Log • Progress</small></header>
+<main id="app"></main>
+<nav id="nav">
+<button data-tab="home">⌂<br>Home</button><button data-tab="review">↻<br>Review</button><button data-tab="words">▣<br>Words</button><button data-tab="errors">⚑<br>Errors</button><button data-tab="progress">◷<br>Progress</button>
+</nav>
+<script>
+const KEY='ielts_vocab_pwa_v2';
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{words:[],errors:[],reviews:[],settings:{},tab:'home'};
+const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+const today=()=>new Date().toISOString().slice(0,10);
+const month=()=>today().slice(0,7);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const due=()=>db.words.filter(w=>(w.next||'0000')<=today());
+function addWord(w){w.id=crypto.randomUUID();w.added=today();w.next=today();w.reviews=0;db.words.unshift(w);save()}
+function schedule(w,type){
+ let days=type==='again'?1:type==='hard'?3:[2,5,10,21][Math.min(w.reviews,3)];
+ w.reviews++; w.last=today(); w.next=new Date(Date.now()+days*864e5).toISOString().slice(0,10);
+ db.reviews.push({date:today(),word:w.word,type});save();render();
+}
+function pageHome(){let d=due(),m=db.words.filter(w=>w.added?.startsWith(month())).length,r=db.reviews.length;
+return `<h2>Dashboard</h2><div class="grid">
+<div class="card stat"><b>${db.words.length}</b><span>Total words</span></div><div class="card stat"><b>${d.length}</b><span>Due today</span></div><div class="card stat"><b>${m}</b><span>Added this month</span></div><div class="card stat"><b>${r}</b><span>Total reviews</span></div></div>
+<div class="card"><h3>Hôm nay</h3><p>${d.length?'Bạn có '+d.length+' từ cần ôn.':'Không có từ đến hạn 🎉'}</p><div class="actions"><button class="primary" onclick="setTab('review')">Review Today</button><button onclick="setTab('words')">+ Add / Import</button></div></div>
+<div class="card"><h3>Workflow</h3><p class="muted">Cambridge test → ghi lỗi → chọn từ thật sự cần học → review theo lịch. Không cần học hàng nghìn từ ngẫu nhiên.</p></div>`}
+function pageReview(){
+let d=due(); if(!d.length)return `<h2>Review Today</h2><div class="card review-box"><div style="font-size:48px">🎉</div><h2>Hết từ cần ôn!</h2><p class="muted">Bạn có thể làm Cambridge hoặc thêm từ mới.</p></div>`;
+let w=d[0]; return `<h2>Review Today</h2><div class="card review-box"><span class="badge">${esc(w.cefr||'')}</span><span class="badge">${esc(w.source||'')}</span><div class="review-word">${esc(w.word)}</div><div class="meaning">${esc(w.meaning)}</div>${w.example?`<div class="example"><b>Example:</b> ${esc(w.example)}</div>`:''}<p class="muted">Review #${w.reviews+1} • còn ${d.length} từ đến hạn</p><div class="actions" style="justify-content:center"><button class="danger" onclick="schedule(db.words.find(x=>x.id==='${w.id}'),'again')">Again +1d</button><button class="warn" onclick="schedule(db.words.find(x=>x.id==='${w.id}'),'hard')">Hard +3d</button><button class="good" onclick="schedule(db.words.find(x=>x.id==='${w.id}'),'easy')">Easy</button></div></div>`}
+function pageWords(){
+return `<h2>Vocabulary</h2><div class="card"><div class="row"><div><label>Search</label><input id="search" oninput="renderWords()" placeholder="word / meaning / source"></div><div><label>CEFR</label><select id="filter" onchange="renderWords()"><option value="">All</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option></select></div></div><div class="actions"><button onclick="document.getElementById('addbox').classList.toggle('hidden')">+ Add word</button><button onclick="document.getElementById('importbox').classList.toggle('hidden')">Bulk import</button><button onclick="exportData()">Export backup</button><label class="btn">Restore<input type="file" accept=".json" onchange="restoreData(event)" hidden></label></div></div>
+<div id="addbox" class="card hidden"><h3>Add word</h3><div class="row"><div><label>Word</label><input id="nw"></div><div><label>Meaning</label><input id="nm"></div></div><div class="row"><div><label>CEFR</label><select id="nc"><option>B1</option><option selected>B2</option><option>C1</option><option>C2</option></select></div><div><label>Source</label><input id="ns" placeholder="Cambridge 18 T1 S1"></div></div><label>Example</label><input id="ne"><button class="primary" style="margin-top:10px" onclick="addWord({word:nw.value,meaning:nm.value,cefr:nc.value,source:ns.value,example:ne.value});render()">Save</button></div>
+<div id="importbox" class="card hidden"><h3>Bulk import</h3><p class="muted">Mỗi dòng: word | meaning | CEFR | example | source</p><textarea id="bulk" rows="8" placeholder="convenient | thuận tiện | B2 | Public transport is convenient. | Cambridge 18 T1"></textarea><button class="primary" style="margin-top:10px" onclick="bulkImport()">Import</button></div>
+<div class="card"><div id="wordlist"></div></div>`}
+function renderWords(){let q=(document.getElementById('search')?.value||'').toLowerCase(),f=document.getElementById('filter')?.value||'';let arr=db.words.filter(w=>(!q||JSON.stringify(w).toLowerCase().includes(q))&&(!f||w.cefr===f));document.getElementById('wordlist').innerHTML=arr.length?arr.map(w=>`<div class="word"><div><b>${esc(w.word)}</b> <span class="badge cefr-${esc(w.cefr)}">${esc(w.cefr)}</span><br><span class="muted">${esc(w.meaning)}</span><br><small>${esc(w.source||'')} • ${w.reviews} reviews • next ${w.next}</small></div><button class="danger" onclick="delWord('${w.id}')">×</button></div>`).join(''):'<p class="muted">No words found.</p>'}
+function delWord(id){if(confirm('Xoá từ này?')){db.words=db.words.filter(w=>w.id!==id);save();render()}}
+function bulkImport(){let lines=document.getElementById('bulk').value.split(/\n/).map(x=>x.trim()).filter(Boolean);lines.forEach(l=>{let [word,meaning,cefr='B2',example='',source='']=l.split('|').map(x=>x.trim());if(word)addWord({word,meaning,cefr,example,source})});render()}
+function pageErrors(){let counts={};db.errors.forEach(e=>counts[e.type]=(counts[e.type]||0)+1);return `<h2>Cambridge Error Log</h2><div class="card"><div class="row"><div><label>Test</label><input id="et" placeholder="Cambridge 18 Test 1"></div><div><label>Section</label><select id="es"><option>Section 1</option><option>Section 2</option><option>Section 3</option><option>Section 4</option></select></div></div><div class="row"><div><label>Question</label><input id="eq" placeholder="Q1"></div><div><label>Error type</label><select id="etype"><option>Didn't hear</option><option>Unknown vocabulary</option><option>Paraphrase not recognised</option><option>Distractor</option><option>Spelling</option><option>Number/date</option><option>Concentration</option><option>Speed</option></select></div></div><label>Your answer</label><input id="ea"><label>Correct answer</label><input id="ec"><label>Lesson</label><textarea id="el" rows="3"></textarea><button class="primary" style="margin-top:10px" onclick="addError()">Save error</button></div>
+<div class="card"><h3>Error pattern</h3>${Object.entries(counts).map(([k,v])=>`<span class="badge">${esc(k)}: ${v}</span>`).join('')||'<span class="muted">Chưa có dữ liệu.</span>'}</div>
+<div class="card"><table><tr><th>Test</th><th>Q</th><th>Error</th><th>Correct</th></tr>${db.errors.slice(0,50).map(e=>`<tr><td>${esc(e.test)}</td><td>${esc(e.q)}</td><td>${esc(e.type)}</td><td>${esc(e.correct)}</td></tr>`).join('')}</table></div>`}
+function addError(){db.errors.unshift({date:today(),test:et.value,section:es.value,q:eq.value,type:etype.value,your:ea.value,correct:ec.value,lesson:el.value});save();render()}
+function pageProgress(){let by={};db.reviews.forEach(r=>by[r.date]=(by[r.date]||0)+1);let max=Math.max(1,...Object.values(by));let last30=[...Array(30)].map((_,i)=>{let d=new Date(Date.now()-(29-i)*864e5).toISOString().slice(0,10);return [d,by[d]||0]});return `<h2>Progress</h2><div class="card"><h3>Review — last 30 days</h3>${last30.map(([d,n])=>`<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><small style="width:80px">${d.slice(5)}</small><div class="progress" style="flex:1"><i style="width:${n/max*100}%"></i></div><small>${n}</small></div>`).join('')}</div><div class="card"><h3>This month</h3><p><b>${db.words.filter(w=>w.added?.startsWith(month())).length}</b> words added · <b>${db.reviews.filter(r=>r.date.startsWith(month())).length}</b> reviews · <b>${db.errors.filter(e=>e.date.startsWith(month())).length}</b> errors logged.</p></div>`}
+function setTab(t){db.tab=t;save();render()}
+function render(){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===db.tab));let p={home:pageHome,review:pageReview,words:pageWords,errors:pageErrors,progress:pageProgress}[db.tab]||pageHome;document.getElementById('app').innerHTML=p();if(db.tab==='words')renderWords()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+function exportData(){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));a.download='ielts-vocabulary-backup.json';a.click()}
+function restoreData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);save();render()}catch{alert('File backup không hợp lệ.')}};r.readAsText(f)}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+render();
+</script>
+</body></html>
